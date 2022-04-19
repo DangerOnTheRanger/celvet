@@ -69,11 +69,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	lintExitStatus := 0
 	limitErrors := celvet.CheckMaxLimits(structural)
 	if len(limitErrors) != 0 {
 		for _, lintError := range limitErrors {
-			fmt.Printf("%s\n", lintError)
+			fmt.Println(lintError)
 		}
-		os.Exit(1)
+		lintExitStatus = 1
 	}
+
+	costErrors := celvet.CheckExprCost(structural)
+	if len(costErrors) != 0 {
+		for _, lintError := range costErrors {
+			fmt.Printf("%s\n", lintError.Error())
+		}
+		lintExitStatus = 1
+	}
+
+	os.Exit(lintExitStatus)
 }
