@@ -34,7 +34,7 @@ func Lint(args []string, outputWriter io.Writer) (int, error) {
 	crdFile := args[1]
 	fileBytes, err := ioutil.ReadFile(crdFile)
 	if err != nil {
-		return 1, fmt.Errorf("error reading %s: %s", crdFile, err)
+		return 1, fmt.Errorf("error reading %s: %w", crdFile, err)
 	}
 
 	scheme := runtime.NewScheme()
@@ -43,7 +43,7 @@ func Lint(args []string, outputWriter io.Writer) (int, error) {
 	decode := codecs.UniversalDeserializer().Decode
 	obj, _, err := decode(fileBytes, nil, nil)
 	if err != nil {
-		return 1, fmt.Errorf("error while decoding: %s", err)
+		return 1, fmt.Errorf("error while decoding: %w", err)
 	}
 	switch obj.(type) {
 	case *apiv1.CustomResourceDefinition:
@@ -57,11 +57,11 @@ func Lint(args []string, outputWriter io.Writer) (int, error) {
 	schema := &api.JSONSchemaProps{}
 	err = apiv1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(v1Schema, schema, nil)
 	if err != nil {
-		return 1, fmt.Errorf("error during schema conversion: %s", err)
+		return 1, fmt.Errorf("error during schema conversion: %w", err)
 	}
 	structural, err := structuralschema.NewStructural(schema)
 	if err != nil {
-		return 1, fmt.Errorf("error converting to structural schema: %s", err)
+		return 1, fmt.Errorf("error converting to structural schema: %w", err)
 	}
 
 	lintExitStatus := 0
