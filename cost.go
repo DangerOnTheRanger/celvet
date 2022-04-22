@@ -35,6 +35,7 @@ func (c *costError) Error() string {
 }
 
 func CheckExprCost(schema *structuralschema.Structural) []*costError {
+	// TODO(DangerOnTheRanger): swap out name system for fieldpaths
 	return checkExprCost(schema, "<root>", rootCostInfo())
 }
 
