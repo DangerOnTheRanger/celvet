@@ -46,7 +46,7 @@ func checkExprCost(schema *structuralschema.Structural, name string, nodeCostInf
 		fmt.Printf("error during compilation at %q: %s\n", name, err)
 		return nil
 	}
-	costErrors := make([]*costError, 0)
+	var costErrors []*costError
 	for _, result := range results {
 		exprCost := getExpressionCost(result, nodeCostInfo)
 		if exprCost > validation.StaticEstimatedCostLimit {
