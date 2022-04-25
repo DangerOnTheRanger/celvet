@@ -17,16 +17,14 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/google/cel-go/cel"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	schemacel "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
 )
 
 type costError struct {
-	Program cel.Program
-	Name    string
-	Cost    uint64
+	Name string
+	Cost uint64
 }
 
 func (c *costError) Error() string {
@@ -50,7 +48,7 @@ func checkExprCost(schema *structuralschema.Structural, name string, nodeCostInf
 	for _, result := range results {
 		exprCost := getExpressionCost(result, nodeCostInfo)
 		if exprCost > validation.StaticEstimatedCostLimit {
-			costErrors = append(costErrors, &costError{Program: result.Program,
+			costErrors = append(costErrors, &costError{
 				Name: name,
 				Cost: exprCost,
 			})
