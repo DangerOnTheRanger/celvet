@@ -24,7 +24,7 @@ func TestCost(t *testing.T) {
 	tests := []struct {
 		name           string
 		schema         *structuralschema.Structural
-		expectedErrors []*costError
+		expectedErrors []*CostError
 	}{
 		{
 			name: "array",
@@ -52,9 +52,9 @@ func TestCost(t *testing.T) {
 					},
 				},
 			},
-			expectedErrors: []*costError{
+			expectedErrors: []*CostError{
 				{
-					Name: "<root>.array",
+					Path: "<root>.array",
 					Cost: 329858626352,
 				},
 			},
@@ -81,7 +81,7 @@ func TestCost(t *testing.T) {
 					MaxItems: int64ptr(5),
 				},
 			},
-			expectedErrors: []*costError{},
+			expectedErrors: []*CostError{},
 		},
 	}
 	for _, test := range tests {
@@ -103,8 +103,8 @@ func TestCost(t *testing.T) {
 	}
 }
 
-func errorsEqual(x, y *costError) bool {
-	return x.Name == y.Name && x.Cost == y.Cost
+func errorsEqual(x, y *CostError) bool {
+	return x.Path == y.Path && x.Cost == y.Cost
 }
 
 func int64ptr(i int64) *int64 {

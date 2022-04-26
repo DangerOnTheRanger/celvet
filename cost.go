@@ -22,35 +22,40 @@ import (
 	schemacel "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
 )
 
-type costError struct {
-	Name string
+// CostError represents an expression whose cost is beyond the per-expression
+// limit.
+type CostError struct {
+	// Path represents the path to the schema node containing the expression.
+	// The path-generating implementation here is different than the one
+	// in Kubernetes and will generate slightly different-looking output.
+	Path string
 	Cost uint64
 }
 
-func (c *costError) Error() string {
+func (c *CostError) Error() string {
 	exceedFactor := float64(c.Cost) / float64(validation.StaticEstimatedCostLimit)
-	return fmt.Sprintf("expression at %q exceeded budget by factor of %.1fx", c.Name, exceedFactor)
+	return fmt.Sprintf("expression at %q exceeded budget by factor of %.1fx", c.Path, exceedFactor)
 }
 
 // CheckExprCost checks the given schema for expressions whose estimated cost
 // is greater than the per-expression cost limit. If any compilation errors
 // are encountered during this process, then those are returned as well.
-func CheckExprCost(schema *structuralschema.Structural) ([]*costError, []error) {
-	// TODO(DangerOnTheRanger): swap out name system for fieldpaths
+func CheckExprCost(schema *structuralschema.Structural) ([]*CostError, []error) {
+	// TODO(DangerOnTheRanger): swap this path system for field.Path
 	return checkExprCost(schema, "<root>", rootCostInfo())
 }
 
-func checkExprCost(schema *structuralschema.Structural, name string, nodeCostInfo costInfo) ([]*costError, []error) {
+func checkExprCost(schema *structuralschema.Structural, path string, nodeCostInfo costInfo) ([]*CostError, []error) {
 	results, err := schemacel.Compile(schema, false, schemacel.PerCallLimit)
 	if err != nil {
 		return nil, []error{err}
 	}
-	var costErrors []*costError
+	var costErrors []*CostError
 	for _, result := range results {
 		exprCost := getExpressionCost(result, nodeCostInfo)
 		if exprCost > validation.StaticEstimatedCostLimit {
-			costErrors = append(costErrors, &costError{
-				Name: name,
+			costErrors = append(costErrors, &CostError{
+				Path: path,
 				Cost: exprCost,
 			})
 		}
@@ -59,14 +64,14 @@ func checkExprCost(schema *structuralschema.Structural, name string, nodeCostInf
 	var compileErrors []error
 	switch schema.Type {
 	case "array":
-		itemCostErrors, itemCompileErrors := checkExprCost(schema.Items, name+".<items>", nodeCostInfo.MultiplyByElementCost(schema))
+		itemCostErrors, itemCompileErrors := checkExprCost(schema.Items, path+".<items>", nodeCostInfo.MultiplyByElementCost(schema))
 		compileErrors = append(compileErrors, itemCompileErrors...)
 		costErrors = append(costErrors, itemCostErrors...)
 	case "object":
 		var propCompileErrors []error
-		var propCostErrors []*costError
+		var propCostErrors []*CostError
 		for propName, propSchema := range schema.Properties {
-			propCostErrors, propCompileErrors = checkExprCost(&propSchema, name+"."+propName, nodeCostInfo.MultiplyByElementCost(schema))
+			propCostErrors, propCompileErrors = checkExprCost(&propSchema, path+"."+propName, nodeCostInfo.MultiplyByElementCost(schema))
 			compileErrors = append(compileErrors, propCompileErrors...)
 			costErrors = append(costErrors, propCostErrors...)
 		}
