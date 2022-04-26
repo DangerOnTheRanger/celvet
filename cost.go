@@ -32,17 +32,18 @@ func (c *costError) Error() string {
 	return fmt.Sprintf("expression at %q exceeded budget by factor of %.1fx", c.Name, exceedFactor)
 }
 
-func CheckExprCost(schema *structuralschema.Structural) []*costError {
+// CheckExprCost checks the given schema for expressions whose estimated cost
+// is greater than the per-expression cost limit. If any compilation errors
+// are encountered during this process, then those are returned as well.
+func CheckExprCost(schema *structuralschema.Structural) ([]*costError, []error) {
 	// TODO(DangerOnTheRanger): swap out name system for fieldpaths
 	return checkExprCost(schema, "<root>", rootCostInfo())
 }
 
-func checkExprCost(schema *structuralschema.Structural, name string, nodeCostInfo costInfo) []*costError {
+func checkExprCost(schema *structuralschema.Structural, name string, nodeCostInfo costInfo) ([]*costError, []error) {
 	results, err := schemacel.Compile(schema, false, schemacel.PerCallLimit)
 	if err != nil {
-		// TODO(DangerOnTheRanger): what's the proper way to handle compilation errors here?
-		fmt.Printf("error during compilation at %q: %s\n", name, err)
-		return nil
+		return nil, []error{err}
 	}
 	var costErrors []*costError
 	for _, result := range results {
@@ -55,15 +56,22 @@ func checkExprCost(schema *structuralschema.Structural, name string, nodeCostInf
 		}
 	}
 
+	var compileErrors []error
 	switch schema.Type {
 	case "array":
-		costErrors = append(costErrors, checkExprCost(schema.Items, name+".<items>", nodeCostInfo.MultiplyByElementCost(schema))...)
+		itemCostErrors, itemCompileErrors := checkExprCost(schema.Items, name+".<items>", nodeCostInfo.MultiplyByElementCost(schema))
+		compileErrors = append(compileErrors, itemCompileErrors...)
+		costErrors = append(costErrors, itemCostErrors...)
 	case "object":
+		var propCompileErrors []error
+		var propCostErrors []*costError
 		for propName, propSchema := range schema.Properties {
-			costErrors = append(costErrors, checkExprCost(&propSchema, name+"."+propName, nodeCostInfo.MultiplyByElementCost(schema))...)
+			propCostErrors, propCompileErrors = checkExprCost(&propSchema, name+"."+propName, nodeCostInfo.MultiplyByElementCost(schema))
+			compileErrors = append(compileErrors, propCompileErrors...)
+			costErrors = append(costErrors, propCostErrors...)
 		}
 	}
-	return costErrors
+	return costErrors, compileErrors
 }
 
 // code below is copied from k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go

@@ -78,10 +78,16 @@ func main() {
 		lintExitStatus = 1
 	}
 
-	costErrors := celvet.CheckExprCost(structural)
+	costErrors, compileErrors := celvet.CheckExprCost(structural)
 	if len(costErrors) != 0 {
 		for _, lintError := range costErrors {
 			fmt.Printf("%s\n", lintError.Error())
+		}
+		lintExitStatus = 1
+	}
+	if len(compileErrors) != 0 {
+		for _, compileError := range compileErrors {
+			fmt.Println(compileError)
 		}
 		lintExitStatus = 1
 	}

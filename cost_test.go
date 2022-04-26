@@ -86,11 +86,14 @@ func TestCost(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			errors := CheckExprCost(test.schema)
-			if len(errors) != len(test.expectedErrors) {
-				t.Errorf("Wrong number of expected errors (got %v, expected %v)", errors, test.expectedErrors)
+			costErrors, compileErrors := CheckExprCost(test.schema)
+			if compileErrors != nil {
+				t.Errorf("Unexpected compile errors: %v", compileErrors)
 			}
-			for i, seenError := range errors {
+			if len(costErrors) != len(test.expectedErrors) {
+				t.Errorf("Wrong number of expected errors (got %v, expected %v)", costErrors, test.expectedErrors)
+			}
+			for i, seenError := range costErrors {
 				expectedError := test.expectedErrors[i]
 				if !errorsEqual(seenError, expectedError) {
 					t.Errorf("Wrong error (expected %v, got %v)", expectedError, seenError)
