@@ -73,7 +73,7 @@ func main() {
 	limitErrors := celvet.CheckMaxLimits(structural)
 	if len(limitErrors) != 0 {
 		for _, lintError := range limitErrors {
-			os.Stderr.WriteString(lintError.Error() + "\n")
+			fmt.Fprintf(os.Stderr, "%s\n", lintError)
 		}
 		lintExitStatus = 1
 	}
@@ -87,7 +87,7 @@ func main() {
 	}
 	if len(compileErrors) != 0 {
 		for _, compileError := range compileErrors {
-			os.Stderr.WriteString(compileError.Error() + "\n")
+			fmt.Fprintf(os.Stderr, "%s\n", compileError)
 		}
 		lintExitStatus = 1
 	}
