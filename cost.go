@@ -33,8 +33,15 @@ type CostError struct {
 }
 
 func (c *CostError) Error() string {
+	return fmt.Sprintf("expression at %q has cost of %d which exceeds cost limit of %d", c.Path, c.Cost, validation.StaticEstimatedCostLimit)
+}
+
+// HumanReadableError returns an error message containing the amount by which
+// the expression exceeded the cost limit as a ratio.
+func (c *CostError) HumanReadableError() string {
 	exceedFactor := float64(c.Cost) / float64(validation.StaticEstimatedCostLimit)
 	return fmt.Sprintf("expression at %q exceeded budget by factor of %.1fx", c.Path, exceedFactor)
+
 }
 
 // CheckExprCost checks the given schema for expressions whose estimated cost
