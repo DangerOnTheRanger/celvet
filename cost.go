@@ -82,6 +82,11 @@ func checkExprCost(schema *structuralschema.Structural, path string, nodeCostInf
 			compileErrors = append(compileErrors, propCompileErrors...)
 			costErrors = append(costErrors, propCostErrors...)
 		}
+		if schema.AdditionalProperties != nil && schema.AdditionalProperties.Structural != nil {
+			propCostErrors, propCompileErrors = checkExprCost(schema.AdditionalProperties.Structural, path+"."+"<properties>", nodeCostInfo.MultiplyByElementCost(schema))
+			compileErrors = append(compileErrors, propCompileErrors...)
+			costErrors = append(costErrors, propCostErrors...)
+		}
 	}
 	return costErrors, compileErrors
 }

@@ -83,6 +83,34 @@ func TestCost(t *testing.T) {
 			},
 			expectedErrors: []*CostError{},
 		},
+		{
+			name: "mapWithPropertyExpression",
+			schema: &structuralschema.Structural{
+				Generic: structuralschema.Generic{
+					Type: "object",
+					AdditionalProperties: &structuralschema.StructuralOrBool{
+						Structural: &structuralschema.Structural{
+							Generic: structuralschema.Generic{
+								Type: "string",
+							},
+							Extensions: structuralschema.Extensions{
+								XValidations: apiextensions.ValidationRules{
+									{
+										Rule: `self == self`,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedErrors: []*CostError{
+				{
+					Path: "<root>.<properties>",
+					Cost: 329855795200,
+				},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
