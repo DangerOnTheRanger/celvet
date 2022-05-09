@@ -58,8 +58,12 @@ func checkExprCost(schema *structuralschema.Structural, path string, nodeCostInf
 		return nil, []error{err}
 	}
 	var costErrors []*CostError
+	var compileErrors []error
 	for _, result := range results {
 		exprCost := getExpressionCost(result, nodeCostInfo)
+		if result.Error != nil {
+			compileErrors = append(compileErrors, fmt.Errorf("%w", result.Error))
+		}
 		if exprCost > validation.StaticEstimatedCostLimit {
 			costErrors = append(costErrors, &CostError{
 				Path: path,
@@ -68,7 +72,6 @@ func checkExprCost(schema *structuralschema.Structural, path string, nodeCostInf
 		}
 	}
 
-	var compileErrors []error
 	switch schema.Type {
 	case "array":
 		itemCostErrors, itemCompileErrors := checkExprCost(schema.Items, path+".<items>", nodeCostInfo.MultiplyByElementCost(schema))
