@@ -1,0 +1,2 @@
+string "<root>.spec.cronSpec" missing maxLength
+string "<root>.spec.image" missing maxLength
