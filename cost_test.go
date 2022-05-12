@@ -163,6 +163,16 @@ func TestCost(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:   "multipleRules",
+			schema: genRootSchema("multiRuleArray", withRule(genArraySchema(nil, withRule(genStringSchema(nil), `true`)), `self.all(x, self.all(y, x == y))`)),
+			expectedErrors: []*CostError{
+				{
+					Path: "<root>.multiRuleArray",
+					Cost: 345881509130194127,
+				},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
