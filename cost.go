@@ -29,6 +29,7 @@ type CostError struct {
 	// The path-generating implementation here is different than the one
 	// in Kubernetes and will generate slightly different-looking output.
 	Path string
+	// Cost represents the cost of the expression. This is a unitless value.
 	Cost uint64
 }
 
