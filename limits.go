@@ -48,6 +48,7 @@ func (l *limitError) Error() string {
 // for every missing limit that could be set on a list/map/string belonging
 // to that schema or any level beneath it.
 func CheckMaxLimits(schema *structuralschema.Structural) []error {
+	// TODO(DangerOnTheRanger): swap out name system for fieldpaths
 	return checkMaxLimits(schema, "<root>")
 }
 

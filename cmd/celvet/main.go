@@ -25,18 +25,29 @@ import (
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	"k8s.io/apimachinery/pkg/runtime"
 	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
+
+	flag "github.com/spf13/pflag"
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Printf("usage: %s crd-file\n", os.Args[0])
+
+	humanReadable := flag.BoolP("human-readable", "r", true, "print out values in human-readable formats")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "%s [flags] crd-file\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) != 1 {
+		flag.Usage()
 		os.Exit(1)
 	}
 
-	crdFile := os.Args[1]
+	crdFile := args[0]
 	fileBytes, err := ioutil.ReadFile(crdFile)
 	if err != nil {
-		fmt.Printf("error reading %s: %s\n", crdFile, err)
+		fmt.Fprintf(os.Stderr, "error reading %s: %s\n", crdFile, err)
 		os.Exit(1)
 	}
 	scheme := runtime.NewScheme()
@@ -45,13 +56,13 @@ func main() {
 	decode := codecs.UniversalDeserializer().Decode
 	obj, _, err := decode(fileBytes, nil, nil)
 	if err != nil {
-		fmt.Printf("error while decoding: %s\n", err)
+		fmt.Fprintf(os.Stderr, "error while decoding: %s\n", err)
 		os.Exit(1)
 	}
 	switch obj.(type) {
 	case *apiv1.CustomResourceDefinition:
 	default:
-		fmt.Printf("unexpected decoded object (expected CustomResourceDefinition), got %T\n", obj)
+		fmt.Fprintf(os.Stderr, "unexpected decoded object (expected CustomResourceDefinition), got %T\n", obj)
 		os.Exit(1)
 	}
 	spec := obj.(*apiv1.CustomResourceDefinition).Spec
@@ -60,20 +71,33 @@ func main() {
 	schema := &api.JSONSchemaProps{}
 	err = apiv1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(v1Schema, schema, nil)
 	if err != nil {
-		fmt.Printf("error during schema conversion: %s\n", err)
+		fmt.Fprintf(os.Stderr, "error during schema conversion: %s\n", err)
 		os.Exit(1)
 	}
 	structural, err := structuralschema.NewStructural(schema)
 	if err != nil {
-		fmt.Printf("error converting to structural schema: %s\n", err)
+		fmt.Fprintf(os.Stderr, "error converting to structural schema: %s\n", err)
 		os.Exit(1)
 	}
 
 	limitErrors := celvet.CheckMaxLimits(structural)
-	if len(limitErrors) != 0 {
-		for _, lintError := range limitErrors {
-			fmt.Printf("%s\n", lintError)
+	for _, lintError := range limitErrors {
+		fmt.Fprintf(os.Stderr, "%s\n", lintError)
+	}
+
+	costErrors, compileErrors := celvet.CheckExprCost(structural)
+	for _, lintError := range costErrors {
+		if *humanReadable {
+			fmt.Fprintf(os.Stderr, "%s\n", lintError.HumanReadableError())
+		} else {
+			fmt.Fprintf(os.Stderr, "%s\n", lintError.Error())
 		}
+	}
+	for _, compileError := range compileErrors {
+		fmt.Fprintf(os.Stderr, "%s\n", compileError)
+	}
+
+	if len(limitErrors)+len(costErrors)+len(compileErrors) > 0 {
 		os.Exit(1)
 	}
 }
