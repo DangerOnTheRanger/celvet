@@ -31,7 +31,7 @@ import (
 
 func main() {
 
-	humanReadable := flag.Bool("human-readable", true, "print out values in human-readable formats")
+	humanReadable := flag.BoolP("human-readable", "r", true, "print out values in human-readable formats")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s [flags] crd-file\n", os.Args[0])
 		flag.PrintDefaults()
