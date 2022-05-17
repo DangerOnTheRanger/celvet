@@ -71,7 +71,7 @@ func checkMaxLimits(schema *structuralschema.Structural, path *field.Path) []*Li
 		} else if schema.ValueValidation.MaxItems == nil {
 			limitErrors = append(limitErrors, &LimitError{path, SchemaTypeList})
 		}
-		limitErrors = append(limitErrors, checkMaxLimits(schema.Items, path.Child("<items>"))...)
+		limitErrors = append(limitErrors, checkMaxLimits(schema.Items, path.Child("items"))...)
 	case "string":
 		if schema.ValueValidation == nil {
 			limitErrors = append(limitErrors, &LimitError{path, SchemaTypeString})
@@ -85,7 +85,7 @@ func checkMaxLimits(schema *structuralschema.Structural, path *field.Path) []*Li
 			} else if schema.ValueValidation.MaxProperties == nil {
 				limitErrors = append(limitErrors, &LimitError{path, SchemaTypeMap})
 			}
-			limitErrors = append(limitErrors, checkMaxLimits(schema.AdditionalProperties.Structural, path)...)
+			limitErrors = append(limitErrors, checkMaxLimits(schema.AdditionalProperties.Structural, path.Child("additionalProperties"))...)
 		}
 		for propName, propSchema := range schema.Properties {
 			limitErrors = append(limitErrors, checkMaxLimits(&propSchema, path.Child(propName))...)

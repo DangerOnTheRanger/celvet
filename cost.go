@@ -73,7 +73,7 @@ func checkExprCost(schema *structuralschema.Structural, path *field.Path, nodeCo
 
 	switch schema.Type {
 	case "array":
-		itemCostErrors, itemCompileErrors := checkExprCost(schema.Items, path.Child("<items>"), nodeCostInfo.MultiplyByElementCost(schema))
+		itemCostErrors, itemCompileErrors := checkExprCost(schema.Items, path.Child("items"), nodeCostInfo.MultiplyByElementCost(schema))
 		compileErrors = append(compileErrors, itemCompileErrors...)
 		costErrors = append(costErrors, itemCostErrors...)
 	case "object":
@@ -85,7 +85,7 @@ func checkExprCost(schema *structuralschema.Structural, path *field.Path, nodeCo
 			costErrors = append(costErrors, propCostErrors...)
 		}
 		if schema.AdditionalProperties != nil && schema.AdditionalProperties.Structural != nil {
-			propCostErrors, propCompileErrors = checkExprCost(schema.AdditionalProperties.Structural, path.Child("<properties>"), nodeCostInfo.MultiplyByElementCost(schema))
+			propCostErrors, propCompileErrors = checkExprCost(schema.AdditionalProperties.Structural, path.Child("additionalProperties"), nodeCostInfo.MultiplyByElementCost(schema))
 			compileErrors = append(compileErrors, propCompileErrors...)
 			costErrors = append(costErrors, propCostErrors...)
 		}

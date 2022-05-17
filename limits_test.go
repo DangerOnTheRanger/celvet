@@ -109,7 +109,7 @@ func TestMaxLimits(t *testing.T) {
 					Type: SchemaTypeMap,
 				},
 				{
-					Path: field.NewPath("openAPIV3Schema"),
+					Path: field.NewPath("openAPIV3Schema", "additionalProperties"),
 					Type: SchemaTypeString,
 				},
 			},

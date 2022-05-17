@@ -98,7 +98,7 @@ func TestCost(t *testing.T) {
 			schema: genRootSchema("array", genArraySchema(nil, withRule(genStringSchema(nil), `self == self`))),
 			expectedErrors: []*CostError{
 				{
-					Path: field.NewPath("openAPIV3Schema", "array", "<items>"),
+					Path: field.NewPath("openAPIV3Schema", "array", "items"),
 					Cost: 329855795200,
 				},
 			},
@@ -128,7 +128,7 @@ func TestCost(t *testing.T) {
 			schema: genMapSchema(nil, withRule(genStringSchema(nil), `self == self`)),
 			expectedErrors: []*CostError{
 				{
-					Path: field.NewPath("openAPIV3Schema", "<properties>"),
+					Path: field.NewPath("openAPIV3Schema", "additionalProperties"),
 					Cost: 329855795200,
 				},
 			},
@@ -159,7 +159,7 @@ func TestCost(t *testing.T) {
 			schema: genRootSchema("mapWithArray", genMapSchema(nil, genArraySchema(nil, withRule(genStringSchema(nil), `self == self`)))),
 			expectedErrors: []*CostError{
 				{
-					Path: field.NewPath("openAPIV3Schema", "mapWithArray", "<properties>", "<items>"),
+					Path: field.NewPath("openAPIV3Schema", "mapWithArray", "additionalProperties", "items"),
 					Cost: 329855795200,
 				},
 			},
