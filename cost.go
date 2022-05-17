@@ -120,7 +120,7 @@ func multiplyWithOverflowGuard(baseCost, cardinality uint64) uint64 {
 }
 
 // unbounded uses nil to represent an unbounded cardinality value.
-var unbounded *uint64 = nil
+var unbounded *uint64
 
 type costInfo struct {
 	// MaxCardinality represents a limit to the number of data elements that can exist for the current
