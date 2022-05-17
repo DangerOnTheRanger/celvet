@@ -16,15 +16,15 @@ package celvet
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 func TestMaxLimits(t *testing.T) {
 	tests := []struct {
 		name           string
 		schema         *structuralschema.Structural
-		expectedErrors []*limitError
+		expectedErrors []*LimitError
 	}{
 		{
 			name: "integer",
@@ -33,7 +33,7 @@ func TestMaxLimits(t *testing.T) {
 					Type: "integer",
 				},
 			},
-			expectedErrors: make([]*limitError, 0),
+			expectedErrors: make([]*LimitError, 0),
 		},
 		{
 			name: "missing array limit",
@@ -47,10 +47,10 @@ func TestMaxLimits(t *testing.T) {
 					},
 				},
 			},
-			expectedErrors: []*limitError{
+			expectedErrors: []*LimitError{
 				{
-					Name: "<root>",
-					Type: typeList,
+					Path: field.NewPath("openAPIV3Schema"),
+					Type: SchemaTypeList,
 				},
 			},
 		},
@@ -68,10 +68,10 @@ func TestMaxLimits(t *testing.T) {
 					},
 				},
 			},
-			expectedErrors: []*limitError{
+			expectedErrors: []*LimitError{
 				{
-					Name: "<root>",
-					Type: typeMap,
+					Path: field.NewPath("openAPIV3Schema"),
+					Type: SchemaTypeMap,
 				},
 			},
 		},
@@ -82,10 +82,10 @@ func TestMaxLimits(t *testing.T) {
 					Type: "string",
 				},
 			},
-			expectedErrors: []*limitError{
+			expectedErrors: []*LimitError{
 				{
-					Name: "<root>",
-					Type: typeString,
+					Path: field.NewPath("openAPIV3Schema"),
+					Type: SchemaTypeString,
 				},
 			},
 		},
@@ -103,14 +103,14 @@ func TestMaxLimits(t *testing.T) {
 					},
 				},
 			},
-			expectedErrors: []*limitError{
+			expectedErrors: []*LimitError{
 				{
-					Name: "<root>",
-					Type: typeMap,
+					Path: field.NewPath("openAPIV3Schema"),
+					Type: SchemaTypeMap,
 				},
 				{
-					Name: "<root>",
-					Type: typeString,
+					Path: field.NewPath("openAPIV3Schema"),
+					Type: SchemaTypeString,
 				},
 			},
 		},
@@ -123,10 +123,14 @@ func TestMaxLimits(t *testing.T) {
 			}
 			for i, seenError := range errors {
 				expectedError := test.expectedErrors[i]
-				if !cmp.Equal(seenError, expectedError) {
+				if !limitErrorsEqual(seenError, expectedError) {
 					t.Errorf("Wrong error (expected %v, got %v)", expectedError, seenError)
 				}
 			}
 		})
 	}
+}
+
+func limitErrorsEqual(x, y *LimitError) bool {
+	return x.Path.String() == y.Path.String() && x.Type == y.Type
 }

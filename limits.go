@@ -17,29 +17,40 @@ import (
 	"fmt"
 
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
-type schemaType int
+// SchemaType represents a list, map or string as used by LimitError.
+type SchemaType int
 
 const (
-	typeList schemaType = iota
-	typeMap
-	typeString
+	// SchemaTypeList represents a list as used by LimitError.
+	SchemaTypeList SchemaType = iota
+	// SchemaTypeMap represents a map as used by LimitError.
+	SchemaTypeMap
+	// SchemaTypeString represents a string as used by LimitError.
+	SchemaTypeString
 )
 
-type limitError struct {
-	Name string
-	Type schemaType
+// LimitError represents a list, map, or string that lacks a user-set limit.
+// For lists, this means maxItems has not been set. For maps, this means
+// maxProperties has not been set. And for strings this means maxLength has not
+// been set.
+type LimitError struct {
+	// Path represents the path to the list, map or string without the limit.
+	Path *field.Path
+	// Type indicates the type of the schema node that caused the error.
+	Type SchemaType
 }
 
-func (l *limitError) Error() string {
+func (l *LimitError) Error() string {
 	switch l.Type {
-	case typeList:
-		return fmt.Sprintf("list %q missing maxItems", l.Name)
-	case typeMap:
-		return fmt.Sprintf("map %q missing maxProperties", l.Name)
-	case typeString:
-		return fmt.Sprintf("string %q missing maxLength", l.Name)
+	case SchemaTypeList:
+		return fmt.Sprintf("list %q missing maxItems", l.Path.String())
+	case SchemaTypeMap:
+		return fmt.Sprintf("map %q missing maxProperties", l.Path.String())
+	case SchemaTypeString:
+		return fmt.Sprintf("string %q missing maxLength", l.Path.String())
 	}
 	return ""
 }
@@ -47,38 +58,37 @@ func (l *limitError) Error() string {
 // CheckMaxLimits takes a schema and returns a list of linter errors
 // for every missing limit that could be set on a list/map/string belonging
 // to that schema or any level beneath it.
-func CheckMaxLimits(schema *structuralschema.Structural) []error {
-	// TODO(DangerOnTheRanger): swap out name system for fieldpaths
-	return checkMaxLimits(schema, "<root>")
+func CheckMaxLimits(schema *structuralschema.Structural) []*LimitError {
+	return checkMaxLimits(schema, field.NewPath("openAPIV3Schema"))
 }
 
-func checkMaxLimits(schema *structuralschema.Structural, name string) []error {
-	limitErrors := make([]error, 0)
+func checkMaxLimits(schema *structuralschema.Structural, path *field.Path) []*LimitError {
+	limitErrors := make([]*LimitError, 0)
 	switch schema.Type {
 	case "array":
 		if schema.ValueValidation == nil {
-			limitErrors = append(limitErrors, &limitError{name, typeList})
+			limitErrors = append(limitErrors, &LimitError{path, SchemaTypeList})
 		} else if schema.ValueValidation.MaxItems == nil {
-			limitErrors = append(limitErrors, &limitError{name, typeList})
+			limitErrors = append(limitErrors, &LimitError{path, SchemaTypeList})
 		}
-		limitErrors = append(limitErrors, checkMaxLimits(schema.Items, name+".<items>")...)
+		limitErrors = append(limitErrors, checkMaxLimits(schema.Items, path.Child("<items>"))...)
 	case "string":
 		if schema.ValueValidation == nil {
-			limitErrors = append(limitErrors, &limitError{name, typeString})
+			limitErrors = append(limitErrors, &LimitError{path, SchemaTypeString})
 		} else if schema.ValueValidation.MaxLength == nil {
-			limitErrors = append(limitErrors, &limitError{name, typeString})
+			limitErrors = append(limitErrors, &LimitError{path, SchemaTypeString})
 		}
 	case "object":
 		if schema.AdditionalProperties != nil && schema.AdditionalProperties.Structural != nil {
 			if schema.ValueValidation == nil {
-				limitErrors = append(limitErrors, &limitError{name, typeMap})
+				limitErrors = append(limitErrors, &LimitError{path, SchemaTypeMap})
 			} else if schema.ValueValidation.MaxProperties == nil {
-				limitErrors = append(limitErrors, &limitError{name, typeMap})
+				limitErrors = append(limitErrors, &LimitError{path, SchemaTypeMap})
 			}
-			limitErrors = append(limitErrors, checkMaxLimits(schema.AdditionalProperties.Structural, name)...)
+			limitErrors = append(limitErrors, checkMaxLimits(schema.AdditionalProperties.Structural, path)...)
 		}
 		for propName, propSchema := range schema.Properties {
-			limitErrors = append(limitErrors, checkMaxLimits(&propSchema, name+"."+propName)...)
+			limitErrors = append(limitErrors, checkMaxLimits(&propSchema, path.Child(propName))...)
 		}
 	}
 	return limitErrors
