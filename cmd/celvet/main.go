@@ -128,13 +128,13 @@ func emitText(limitErrors []error, costErrors []*celvet.CostError, compileErrors
 		if humanReadable {
 			fmt.Fprintf(os.Stderr, "%s\n", lintError.HumanReadableError())
 		} else {
-			fmt.Fprintf(os.Stderr, "%s\n", lintError.Error())
+			fmt.Fprintln(os.Stderr, lintError)
 		}
 	}
 	for _, compileError := range compileErrors {
-		fmt.Fprintf(os.Stderr, "%s\n", compileError)
+		fmt.Fprintln(os.Stderr, compileError)
 	}
 	for _, otherError := range otherErrors {
-		fmt.Fprintf(os.Stderr, otherError.Error())
+		fmt.Fprintln(os.Stderr, otherError)
 	}
 }
