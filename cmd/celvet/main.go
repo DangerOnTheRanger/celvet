@@ -14,6 +14,8 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -31,7 +33,8 @@ import (
 
 func main() {
 
-	humanReadable := flag.BoolP("human-readable", "r", true, "print out values in human-readable formats")
+	humanReadable := flag.BoolP("human-readable", "r", true, "print out values in human-readable formats (only applies if --json/-j is not passed)")
+	outputFormat := flag.StringP("output", "o", "text", `output format (valid values are "text" and "json")`)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s [flags] crd-file\n", os.Args[0])
 		flag.PrintDefaults()
@@ -41,6 +44,14 @@ func main() {
 	args := flag.Args()
 	if len(args) != 1 {
 		flag.Usage()
+		os.Exit(1)
+	}
+
+	useJSON := false
+	if *outputFormat == "json" {
+		useJSON = true
+	} else if *outputFormat != "text" {
+		fmt.Fprintf(os.Stderr, "unknown output format %q (valid values are \"text\" and \"json\")\n", *outputFormat)
 		os.Exit(1)
 	}
 
@@ -81,23 +92,58 @@ func main() {
 	}
 
 	limitErrors := celvet.CheckMaxLimits(structural)
-	for _, lintError := range limitErrors {
-		fmt.Fprintf(os.Stderr, "%s\n", lintError)
-	}
-
-	costErrors, compileErrors := celvet.CheckExprCost(structural)
-	for _, lintError := range costErrors {
-		if *humanReadable {
-			fmt.Fprintf(os.Stderr, "%s\n", lintError.HumanReadableError())
-		} else {
-			fmt.Fprintf(os.Stderr, "%s\n", lintError.Error())
-		}
-	}
-	for _, compileError := range compileErrors {
-		fmt.Fprintf(os.Stderr, "%s\n", compileError)
+	costErrors, compileErrors, otherErrors := celvet.CheckExprCost(structural)
+	if useJSON {
+		emitJSON(limitErrors, costErrors, compileErrors, otherErrors)
+	} else {
+		emitText(limitErrors, costErrors, compileErrors, otherErrors, *humanReadable)
 	}
 
 	if len(limitErrors)+len(costErrors)+len(compileErrors) > 0 {
 		os.Exit(1)
+	}
+}
+
+func emitJSON(limitErrors []error, costErrors []*celvet.CostError, compileErrors []*celvet.CompilationError, otherErrors []error) {
+	type JSONOutput struct {
+		LimitErrors   []error                    `json:"limitErrors"`
+		CostErrors    []*celvet.CostError        `json:"costErrors"`
+		CompileErrors []*celvet.CompilationError `json:"compileErrors"`
+		OtherErrors   []string                   `json:"otherErrors"`
+	}
+
+	buf := bytes.NewBuffer(nil)
+	encoder := json.NewEncoder(buf)
+	encoder.SetEscapeHTML(false)
+	strOtherErrors := make([]string, 0)
+	for _, err := range otherErrors {
+		strOtherErrors = append(strOtherErrors, err.Error())
+	}
+	output := JSONOutput{LimitErrors: limitErrors, CostErrors: costErrors, CompileErrors: compileErrors, OtherErrors: strOtherErrors}
+	err := encoder.Encode(output)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error generating JSON output: %s\n", err)
+		os.Exit(1)
+	}
+	// use Printf instead of Println to prevent a redundant newline from being output
+	fmt.Printf("%s", buf.Bytes())
+}
+
+func emitText(limitErrors []error, costErrors []*celvet.CostError, compileErrors []*celvet.CompilationError, otherErrors []error, humanReadable bool) {
+	for _, lintError := range limitErrors {
+		fmt.Fprintf(os.Stderr, "%s\n", lintError)
+	}
+	for _, lintError := range costErrors {
+		if humanReadable {
+			fmt.Fprintf(os.Stderr, "%s\n", lintError.HumanReadableError())
+		} else {
+			fmt.Fprintln(os.Stderr, lintError)
+		}
+	}
+	for _, compileError := range compileErrors {
+		fmt.Fprintln(os.Stderr, compileError)
+	}
+	for _, otherError := range otherErrors {
+		fmt.Fprintln(os.Stderr, otherError)
 	}
 }
