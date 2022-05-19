@@ -48,7 +48,7 @@ func (c *CostError) HumanReadableError() string {
 // is greater than the per-expression cost limit. If any compilation errors
 // are encountered during this process, then those are returned as well.
 func CheckExprCost(schema *structuralschema.Structural) ([]*CostError, []error) {
-	return checkExprCost(schema, field.NewPath("openAPIV3Schema"), rootCostInfo())
+	return checkExprCost(schema, field.NewPath("spec", "validation", "openAPIV3Schema"), rootCostInfo())
 }
 
 func checkExprCost(schema *structuralschema.Structural, path *field.Path, nodeCostInfo costInfo) ([]*CostError, []error) {
@@ -58,14 +58,14 @@ func checkExprCost(schema *structuralschema.Structural, path *field.Path, nodeCo
 	}
 	var costErrors []*CostError
 	var compileErrors []error
-	for _, result := range results {
+	for index, result := range results {
 		exprCost := getExpressionCost(result, nodeCostInfo)
 		if result.Error != nil {
 			compileErrors = append(compileErrors, fmt.Errorf("%w", result.Error))
 		}
 		if exprCost > validation.StaticEstimatedCostLimit {
 			costErrors = append(costErrors, &CostError{
-				Path: path,
+				Path: path.Child("x-kubernetes-validations").Index(index).Child("rule"),
 				Cost: exprCost,
 			})
 		}
@@ -80,7 +80,7 @@ func checkExprCost(schema *structuralschema.Structural, path *field.Path, nodeCo
 		var propCompileErrors []error
 		var propCostErrors []*CostError
 		for propName, propSchema := range schema.Properties {
-			propCostErrors, propCompileErrors = checkExprCost(&propSchema, path.Child(propName), nodeCostInfo.MultiplyByElementCost(schema))
+			propCostErrors, propCompileErrors = checkExprCost(&propSchema, path.Child("properties").Key(propName), nodeCostInfo.MultiplyByElementCost(schema))
 			compileErrors = append(compileErrors, propCompileErrors...)
 			costErrors = append(costErrors, propCostErrors...)
 		}

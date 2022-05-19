@@ -88,7 +88,7 @@ func TestCost(t *testing.T) {
 			schema: genRootSchema("array", withRule(genArraySchema(nil, genStringSchema(nil)), `self.all(x, x == x)`)),
 			expectedErrors: []*CostError{
 				{
-					Path: field.NewPath("openAPIV3Schema", "array"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema", "properties").Key("array").Child("x-kubernetes-validations").Index(0).Child("rule"),
 					Cost: 329858626352,
 				},
 			},
@@ -98,7 +98,7 @@ func TestCost(t *testing.T) {
 			schema: genRootSchema("array", genArraySchema(nil, withRule(genStringSchema(nil), `self == self`))),
 			expectedErrors: []*CostError{
 				{
-					Path: field.NewPath("openAPIV3Schema", "array", "items"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema", "properties").Key("array").Child("items", "x-kubernetes-validations").Index(0).Child("rule"),
 					Cost: 329855795200,
 				},
 			},
@@ -113,7 +113,7 @@ func TestCost(t *testing.T) {
 			schema: withRule(genMapSchema(nil, genStringSchema(nil)), `self.all(x, self.all(y, x == y))`),
 			expectedErrors: []*CostError{
 				{
-					Path: field.NewPath("openAPIV3Schema"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema", "x-kubernetes-validations").Index(0).Child("rule"),
 					Cost: 773092147202,
 				},
 			},
@@ -128,7 +128,7 @@ func TestCost(t *testing.T) {
 			schema: genMapSchema(nil, withRule(genStringSchema(nil), `self == self`)),
 			expectedErrors: []*CostError{
 				{
-					Path: field.NewPath("openAPIV3Schema", "additionalProperties"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema", "additionalProperties", "x-kubernetes-validations").Index(0).Child("rule"),
 					Cost: 329855795200,
 				},
 			},
@@ -139,7 +139,7 @@ func TestCost(t *testing.T) {
 				`["abc", "def", "ghi", "jhk"].all(x, ["abc", "def", "ghi", "jhk"].all(y, x == self && y == self && x == y))`)),
 			expectedErrors: []*CostError{
 				{
-					Path: field.NewPath("openAPIV3Schema", "excessiveString"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema", "properties").Key("excessiveString").Child("x-kubernetes-validations").Index(0).Child("rule"),
 					Cost: 15099715,
 				},
 			},
@@ -159,7 +159,7 @@ func TestCost(t *testing.T) {
 			schema: genRootSchema("mapWithArray", genMapSchema(nil, genArraySchema(nil, withRule(genStringSchema(nil), `self == self`)))),
 			expectedErrors: []*CostError{
 				{
-					Path: field.NewPath("openAPIV3Schema", "mapWithArray", "additionalProperties", "items"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema", "properties").Key("mapWithArray").Child("additionalProperties", "items", "x-kubernetes-validations").Index(0).Child("rule"),
 					Cost: 329855795200,
 				},
 			},
@@ -169,7 +169,7 @@ func TestCost(t *testing.T) {
 			schema: genRootSchema("multiRuleArray", withRule(genArraySchema(nil, withRule(genStringSchema(nil), `true`)), `self.all(x, self.all(y, x == y))`)),
 			expectedErrors: []*CostError{
 				{
-					Path: field.NewPath("openAPIV3Schema", "multiRuleArray"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema", "properties").Key("multiRuleArray").Child("x-kubernetes-validations").Index(0).Child("rule"),
 					Cost: 345881509130194127,
 				},
 			},

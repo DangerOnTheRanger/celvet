@@ -59,7 +59,7 @@ func (l *LimitError) Error() string {
 // for every missing limit that could be set on a list/map/string belonging
 // to that schema or any level beneath it.
 func CheckMaxLimits(schema *structuralschema.Structural) []*LimitError {
-	return checkMaxLimits(schema, field.NewPath("openAPIV3Schema"))
+	return checkMaxLimits(schema, field.NewPath("spec", "validation", "openAPIV3Schema"))
 }
 
 func checkMaxLimits(schema *structuralschema.Structural, path *field.Path) []*LimitError {
@@ -88,7 +88,7 @@ func checkMaxLimits(schema *structuralschema.Structural, path *field.Path) []*Li
 			limitErrors = append(limitErrors, checkMaxLimits(schema.AdditionalProperties.Structural, path.Child("additionalProperties"))...)
 		}
 		for propName, propSchema := range schema.Properties {
-			limitErrors = append(limitErrors, checkMaxLimits(&propSchema, path.Child(propName))...)
+			limitErrors = append(limitErrors, checkMaxLimits(&propSchema, path.Child("properties").Key(propName))...)
 		}
 	}
 	return limitErrors

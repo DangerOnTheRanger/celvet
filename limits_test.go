@@ -49,7 +49,7 @@ func TestMaxLimits(t *testing.T) {
 			},
 			expectedErrors: []*LimitError{
 				{
-					Path: field.NewPath("openAPIV3Schema"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema"),
 					Type: SchemaTypeList,
 				},
 			},
@@ -70,7 +70,7 @@ func TestMaxLimits(t *testing.T) {
 			},
 			expectedErrors: []*LimitError{
 				{
-					Path: field.NewPath("openAPIV3Schema"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema"),
 					Type: SchemaTypeMap,
 				},
 			},
@@ -84,7 +84,7 @@ func TestMaxLimits(t *testing.T) {
 			},
 			expectedErrors: []*LimitError{
 				{
-					Path: field.NewPath("openAPIV3Schema"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema"),
 					Type: SchemaTypeString,
 				},
 			},
@@ -105,11 +105,11 @@ func TestMaxLimits(t *testing.T) {
 			},
 			expectedErrors: []*LimitError{
 				{
-					Path: field.NewPath("openAPIV3Schema"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema"),
 					Type: SchemaTypeMap,
 				},
 				{
-					Path: field.NewPath("openAPIV3Schema", "additionalProperties"),
+					Path: field.NewPath("spec", "validation", "openAPIV3Schema", "additionalProperties"),
 					Type: SchemaTypeString,
 				},
 			},
