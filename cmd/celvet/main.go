@@ -123,6 +123,7 @@ func emitJSON(limitErrors []error, costErrors []*celvet.CostError, compileErrors
 	err := encoder.Encode(output)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error generating JSON output: %s\n", err)
+		os.Exit(1)
 	}
 	// use Printf instead of Println to prevent a redundant newline from being output
 	fmt.Printf("%s", buf.Bytes())
