@@ -34,7 +34,7 @@ import (
 func main() {
 
 	humanReadable := flag.BoolP("human-readable", "r", true, "print out values in human-readable formats (only applies if --json/-j is not passed)")
-	useJSON := flag.BoolP("json", "j", false, "emit linter errors as JSON")
+	outputFormat := flag.StringP("output", "o", "text", `output format (valid values are "text" and "json")`)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s [flags] crd-file\n", os.Args[0])
 		flag.PrintDefaults()
@@ -44,6 +44,14 @@ func main() {
 	args := flag.Args()
 	if len(args) != 1 {
 		flag.Usage()
+		os.Exit(1)
+	}
+
+	useJSON := false
+	if *outputFormat == "json" {
+		useJSON = true
+	} else if *outputFormat != "text" {
+		fmt.Fprintf(os.Stderr, "unknown output format %q (valid values are \"text\" and \"json\")\n", *outputFormat)
 		os.Exit(1)
 	}
 
@@ -85,7 +93,7 @@ func main() {
 
 	limitErrors := celvet.CheckMaxLimits(structural)
 	costErrors, compileErrors, otherErrors := celvet.CheckExprCost(structural)
-	if *useJSON {
+	if useJSON {
 		emitJSON(limitErrors, costErrors, compileErrors, otherErrors)
 	} else {
 		emitText(limitErrors, costErrors, compileErrors, otherErrors, *humanReadable)
