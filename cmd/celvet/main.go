@@ -88,7 +88,7 @@ func main() {
 	if *useJSON {
 		emitJSON(limitErrors, costErrors, compileErrors, otherErrors)
 	} else {
-		emitNormal(limitErrors, costErrors, compileErrors, otherErrors, *humanReadable)
+		emitText(limitErrors, costErrors, compileErrors, otherErrors, *humanReadable)
 	}
 
 	if len(limitErrors)+len(costErrors)+len(compileErrors) > 0 {
@@ -120,7 +120,7 @@ func emitJSON(limitErrors []error, costErrors []*celvet.CostError, compileErrors
 	fmt.Printf("%s", buf.Bytes())
 }
 
-func emitNormal(limitErrors []error, costErrors []*celvet.CostError, compileErrors []*celvet.CompilationError, otherErrors []error, humanReadable bool) {
+func emitText(limitErrors []error, costErrors []*celvet.CostError, compileErrors []*celvet.CompilationError, otherErrors []error, humanReadable bool) {
 	for _, lintError := range limitErrors {
 		fmt.Fprintf(os.Stderr, "%s\n", lintError)
 	}
