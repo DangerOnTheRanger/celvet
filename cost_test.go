@@ -176,12 +176,17 @@ func TestCost(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			costErrors, compileErrors := CheckExprCost(test.schema)
+			costErrors, compileErrors, otherErrors := CheckExprCost(test.schema)
 			if len(compileErrors) != test.numExpectedCompileErrors {
 				t.Errorf("Unexpected number of compile errors (got %d, expected %d)", len(compileErrors), test.numExpectedCompileErrors)
 			}
 			if len(costErrors) != len(test.expectedErrors) {
 				t.Errorf("Wrong number of expected errors (got %v, expected %v)", costErrors, test.expectedErrors)
+			}
+			// otherErrors is populated by cel.Compile, so this typically
+			// indicates some kind of internal error
+			if len(otherErrors) != 0 {
+				t.Errorf("Unexpected non cost/compile errors: %v", otherErrors)
 			}
 			for i, seenError := range costErrors {
 				expectedError := test.expectedErrors[i]

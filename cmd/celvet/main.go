@@ -84,11 +84,11 @@ func main() {
 	}
 
 	limitErrors := celvet.CheckMaxLimits(structural)
-	costErrors, compileErrors := celvet.CheckExprCost(structural)
+	costErrors, compileErrors, otherErrors := celvet.CheckExprCost(structural)
 	if *useJSON {
-		emitJSON(limitErrors, costErrors, compileErrors)
+		emitJSON(limitErrors, costErrors, compileErrors, otherErrors)
 	} else {
-		emitText(limitErrors, costErrors, compileErrors, *humanReadable)
+		emitNormal(limitErrors, costErrors, compileErrors, otherErrors, *humanReadable)
 	}
 
 	if len(limitErrors)+len(costErrors)+len(compileErrors) > 0 {
@@ -96,17 +96,22 @@ func main() {
 	}
 }
 
-func emitJSON(limitErrors []error, costErrors []*celvet.CostError, compileErrors []error) {
+func emitJSON(limitErrors []error, costErrors []*celvet.CostError, compileErrors []*celvet.CompilationError, otherErrors []error) {
 	type JSONOutput struct {
-		LimitErrors   []error             `json:"limitErrors"`
-		CostErrors    []*celvet.CostError `json:"costErrors"`
-		CompileErrors []error             `json:"compileErrors"`
+		LimitErrors   []error                    `json:"limitErrors"`
+		CostErrors    []*celvet.CostError        `json:"costErrors"`
+		CompileErrors []*celvet.CompilationError `json:"compileErrors"`
+		OtherErrors   []string                   `json:"otherErrors"`
 	}
 
 	buf := bytes.NewBuffer(nil)
 	encoder := json.NewEncoder(buf)
 	encoder.SetEscapeHTML(false)
-	output := JSONOutput{LimitErrors: limitErrors, CostErrors: costErrors, CompileErrors: compileErrors}
+	strOtherErrors := make([]string, 0)
+	for _, err := range otherErrors {
+		strOtherErrors = append(strOtherErrors, err.Error())
+	}
+	output := JSONOutput{LimitErrors: limitErrors, CostErrors: costErrors, CompileErrors: compileErrors, OtherErrors: strOtherErrors}
 	err := encoder.Encode(output)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error generating JSON output: %s\n", err)
@@ -115,7 +120,7 @@ func emitJSON(limitErrors []error, costErrors []*celvet.CostError, compileErrors
 	fmt.Printf("%s", buf.Bytes())
 }
 
-func emitText(limitErrors []error, costErrors []*celvet.CostError, compileErrors []error, humanReadable bool) {
+func emitNormal(limitErrors []error, costErrors []*celvet.CostError, compileErrors []*celvet.CompilationError, otherErrors []error, humanReadable bool) {
 	for _, lintError := range limitErrors {
 		fmt.Fprintf(os.Stderr, "%s\n", lintError)
 	}
@@ -128,5 +133,8 @@ func emitText(limitErrors []error, costErrors []*celvet.CostError, compileErrors
 	}
 	for _, compileError := range compileErrors {
 		fmt.Fprintf(os.Stderr, "%s\n", compileError)
+	}
+	for _, otherError := range otherErrors {
+		fmt.Fprintf(os.Stderr, otherError.Error())
 	}
 }
