@@ -14,6 +14,8 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -31,7 +33,8 @@ import (
 
 func main() {
 
-	humanReadable := flag.BoolP("human-readable", "r", true, "print out values in human-readable formats")
+	humanReadable := flag.BoolP("human-readable", "r", true, "print out values in human-readable formats (only applies if --json/-j is not passed)")
+	useJSON := flag.BoolP("json", "j", false, "emit linter errors as JSON")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s [flags] crd-file\n", os.Args[0])
 		flag.PrintDefaults()
@@ -81,13 +84,43 @@ func main() {
 	}
 
 	limitErrors := celvet.CheckMaxLimits(structural)
+	costErrors, compileErrors := celvet.CheckExprCost(structural)
+	if *useJSON {
+		emitJSON(limitErrors, costErrors, compileErrors)
+	} else {
+		emitNormal(limitErrors, costErrors, compileErrors, *humanReadable)
+	}
+
+	if len(limitErrors)+len(costErrors)+len(compileErrors) > 0 {
+		os.Exit(1)
+	}
+}
+
+func emitJSON(limitErrors []error, costErrors []*celvet.CostError, compileErrors []error) {
+	type JSONOutput struct {
+		LimitErrors   []error             `json:"limitErrors"`
+		CostErrors    []*celvet.CostError `json:"costErrors"`
+		CompileErrors []error             `json:"compileErrors"`
+	}
+
+	buf := bytes.NewBuffer(nil)
+	encoder := json.NewEncoder(buf)
+	encoder.SetEscapeHTML(false)
+	output := JSONOutput{LimitErrors: limitErrors, CostErrors: costErrors, CompileErrors: compileErrors}
+	err := encoder.Encode(output)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error generating JSON output: %s\n", err)
+	}
+	// use Printf instead of Println to prevent a redundant newline from being output
+	fmt.Printf("%s", buf.Bytes())
+}
+
+func emitNormal(limitErrors []error, costErrors []*celvet.CostError, compileErrors []error, humanReadable bool) {
 	for _, lintError := range limitErrors {
 		fmt.Fprintf(os.Stderr, "%s\n", lintError)
 	}
-
-	costErrors, compileErrors := celvet.CheckExprCost(structural)
 	for _, lintError := range costErrors {
-		if *humanReadable {
+		if humanReadable {
 			fmt.Fprintf(os.Stderr, "%s\n", lintError.HumanReadableError())
 		} else {
 			fmt.Fprintf(os.Stderr, "%s\n", lintError.Error())
@@ -95,9 +128,5 @@ func main() {
 	}
 	for _, compileError := range compileErrors {
 		fmt.Fprintf(os.Stderr, "%s\n", compileError)
-	}
-
-	if len(limitErrors)+len(costErrors)+len(compileErrors) > 0 {
-		os.Exit(1)
 	}
 }

@@ -28,8 +28,8 @@ const (
 )
 
 type limitError struct {
-	Name string
-	Type schemaType
+	Name string     `json:"name"`
+	Type schemaType `json:"type"`
 }
 
 func (l *limitError) Error() string {

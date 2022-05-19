@@ -28,9 +28,9 @@ type CostError struct {
 	// Path represents the path to the schema node containing the expression.
 	// The path-generating implementation here is different than the one
 	// in Kubernetes and will generate slightly different-looking output.
-	Path string
+	Path string `json:"path"`
 	// Cost represents the cost of the expression. This is a unitless value.
-	Cost uint64
+	Cost uint64 `json:"cost"`
 }
 
 func (c *CostError) Error() string {
