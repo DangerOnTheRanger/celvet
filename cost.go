@@ -20,28 +20,27 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	schemacel "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // CostError represents an expression whose cost is beyond the per-expression
 // limit.
 type CostError struct {
 	// Path represents the path to the schema node containing the expression.
-	// The path-generating implementation here is different than the one
-	// in Kubernetes and will generate slightly different-looking output.
-	Path string
+	Path *field.Path
 	// Cost represents the cost of the expression. This is a unitless value.
 	Cost uint64
 }
 
 func (c *CostError) Error() string {
-	return fmt.Sprintf("expression at %q has cost of %d which exceeds cost limit of %d", c.Path, c.Cost, validation.StaticEstimatedCostLimit)
+	return fmt.Sprintf("expression at %q has cost of %d which exceeds cost limit of %d", c.Path.String(), c.Cost, validation.StaticEstimatedCostLimit)
 }
 
 // HumanReadableError returns an error message containing the amount by which
 // the expression exceeded the cost limit as a ratio.
 func (c *CostError) HumanReadableError() string {
 	exceedFactor := float64(c.Cost) / float64(validation.StaticEstimatedCostLimit)
-	return fmt.Sprintf("expression at %q exceeded budget by factor of %.1fx", c.Path, exceedFactor)
+	return fmt.Sprintf("expression at %q exceeded budget by factor of %.1fx", c.Path.String(), exceedFactor)
 
 }
 
@@ -49,25 +48,24 @@ func (c *CostError) HumanReadableError() string {
 // is greater than the per-expression cost limit. If any compilation errors
 // are encountered during this process, then those are returned as well.
 func CheckExprCost(schema *structuralschema.Structural) ([]*CostError, []error) {
-	// TODO(DangerOnTheRanger): swap this path system for field.Path
-	return checkExprCost(schema, "<root>", rootCostInfo())
+	return checkExprCost(schema, field.NewPath("spec", "validation", "openAPIV3Schema"), rootCostInfo())
 }
 
-func checkExprCost(schema *structuralschema.Structural, path string, nodeCostInfo costInfo) ([]*CostError, []error) {
+func checkExprCost(schema *structuralschema.Structural, path *field.Path, nodeCostInfo costInfo) ([]*CostError, []error) {
 	results, err := schemacel.Compile(schema, false, schemacel.PerCallLimit)
 	if err != nil {
 		return nil, []error{err}
 	}
 	var costErrors []*CostError
 	var compileErrors []error
-	for _, result := range results {
+	for index, result := range results {
 		exprCost := getExpressionCost(result, nodeCostInfo)
 		if result.Error != nil {
 			compileErrors = append(compileErrors, fmt.Errorf("%w", result.Error))
 		}
 		if exprCost > validation.StaticEstimatedCostLimit {
 			costErrors = append(costErrors, &CostError{
-				Path: path,
+				Path: path.Child("x-kubernetes-validations").Index(index).Child("rule"),
 				Cost: exprCost,
 			})
 		}
@@ -75,19 +73,19 @@ func checkExprCost(schema *structuralschema.Structural, path string, nodeCostInf
 
 	switch schema.Type {
 	case "array":
-		itemCostErrors, itemCompileErrors := checkExprCost(schema.Items, path+".<items>", nodeCostInfo.MultiplyByElementCost(schema))
+		itemCostErrors, itemCompileErrors := checkExprCost(schema.Items, path.Child("items"), nodeCostInfo.MultiplyByElementCost(schema))
 		compileErrors = append(compileErrors, itemCompileErrors...)
 		costErrors = append(costErrors, itemCostErrors...)
 	case "object":
 		var propCompileErrors []error
 		var propCostErrors []*CostError
 		for propName, propSchema := range schema.Properties {
-			propCostErrors, propCompileErrors = checkExprCost(&propSchema, path+"."+propName, nodeCostInfo.MultiplyByElementCost(schema))
+			propCostErrors, propCompileErrors = checkExprCost(&propSchema, path.Child("properties").Key(propName), nodeCostInfo.MultiplyByElementCost(schema))
 			compileErrors = append(compileErrors, propCompileErrors...)
 			costErrors = append(costErrors, propCostErrors...)
 		}
 		if schema.AdditionalProperties != nil && schema.AdditionalProperties.Structural != nil {
-			propCostErrors, propCompileErrors = checkExprCost(schema.AdditionalProperties.Structural, path+"."+"<properties>", nodeCostInfo.MultiplyByElementCost(schema))
+			propCostErrors, propCompileErrors = checkExprCost(schema.AdditionalProperties.Structural, path.Child("additionalProperties"), nodeCostInfo.MultiplyByElementCost(schema))
 			compileErrors = append(compileErrors, propCompileErrors...)
 			costErrors = append(costErrors, propCostErrors...)
 		}
