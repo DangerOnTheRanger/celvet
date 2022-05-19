@@ -28,7 +28,7 @@ const (
 )
 
 type limitError struct {
-	Name string     `json:"name"`
+	Name string     `json:"path"`
 	Type schemaType `json:"type"`
 }
 
